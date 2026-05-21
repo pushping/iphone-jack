@@ -13,11 +13,6 @@ export interface PromptTemplate {
   prompt: string;
 }
 
-export interface GeneratedPrompt {
-  prompt: string;
-  templates: string[];
-}
-
 export interface Video {
   id: string;
   prompt: string;
@@ -42,4 +37,27 @@ export interface AppState {
   generatedPrompt: string;
   videos: Video[];
   currentVideo: Video | null;
+  // Auth (Module 1)
+  user: UserProfile | null;
+  // Usage (Module 2)
+  usageLimits: UsageLimits | null;
+}
+
+// --- Auth & User ---
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: 'user' | 'admin';
+  subscriptionTier: 'free' | 'paid';
+  createdAt: Date;
+}
+
+// --- Usage & Subscription ---
+export type FeatureType = 'prompt_gen' | 'image_analysis' | 'video_gen';
+
+export interface UsageLimits {
+  promptGen: { used: number; limit: number | null };
+  imageAnalysis: { used: number; limit: number | null };
+  videoGen: { used: number; limit: number | null };
 }

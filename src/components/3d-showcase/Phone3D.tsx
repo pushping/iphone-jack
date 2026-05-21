@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, RoundedBox, MeshDistortMaterial } from '@react-three/drei';
 import type { Mesh, Group } from 'three';
@@ -19,28 +19,16 @@ function PhoneModel() {
   return (
     <Float speed={2} rotationIntensity={0.3} floatIntensity={0.5}>
       <group ref={groupRef}>
-        {/* Phone body */}
         <RoundedBox args={[1.4, 2.8, 0.12]} radius={0.15} smoothness={4}>
-          <meshStandardMaterial
-            color="#1a1a2e"
-            metalness={0.9}
-            roughness={0.1}
-          />
+          <meshStandardMaterial color="#1a1a2e" metalness={0.9} roughness={0.1} />
         </RoundedBox>
 
-        {/* Screen */}
         <mesh ref={screenRef} position={[0, 0, 0.065]}>
           <RoundedBox args={[1.25, 2.6, 0.01]} radius={0.1} smoothness={4}>
-            <MeshDistortMaterial
-              color="#0f172a"
-              speed={2}
-              distort={0.05}
-              radius={1}
-            />
+            <MeshDistortMaterial color="#0f172a" speed={2} distort={0.05} radius={1} />
           </RoundedBox>
         </mesh>
 
-        {/* Screen glow line */}
         <mesh position={[0, 0, 0.075]}>
           <planeGeometry args={[1.1, 2.3]} />
           <meshStandardMaterial
@@ -52,16 +40,10 @@ function PhoneModel() {
           />
         </mesh>
 
-        {/* Camera module */}
         <group position={[-0.35, 0.85, 0.07]}>
           <RoundedBox args={[0.5, 0.5, 0.08]} radius={0.08} smoothness={4}>
-            <meshStandardMaterial
-              color="#1a1a2e"
-              metalness={0.8}
-              roughness={0.2}
-            />
+            <meshStandardMaterial color="#1a1a2e" metalness={0.8} roughness={0.2} />
           </RoundedBox>
-          {/* Camera lenses */}
           {[[-0.12, 0.12], [0.12, 0.12], [-0.12, -0.12]].map(([x, y], i) => (
             <mesh key={i} position={[x, y, 0.045]}>
               <cylinderGeometry args={[0.06, 0.06, 0.02, 16]} />
@@ -90,16 +72,34 @@ function SceneLighting() {
 }
 
 export function Phone3D() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry.isIntersecting),
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="w-full h-[500px] md:h-[600px]">
-      <Canvas
-        camera={{ position: [0, 0, 5], fov: 45 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true }}
-      >
-        <SceneLighting />
-        <PhoneModel />
-      </Canvas>
+    <div ref={containerRef} className="w-full h-[500px] md:h-[600px]">
+      {visible && (
+        <Canvas
+          camera={{ position: [0, 0, 5], fov: 45 }}
+          dpr={[1, 2]}
+          gl={{ antialias: true, alpha: true }}
+          frameloop="always"
+        >
+          <SceneLighting />
+          <PhoneModel />
+        </Canvas>
+      )}
     </div>
   );
 }

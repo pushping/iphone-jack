@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Wand2, Copy, Check, ChevronRight, Sparkles } from 'lucide-react';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { useAppStore } from '@/hooks/useAppState';
+import { useUsage } from '@/hooks/useUsage';
+import { UsageGate } from '@/components/usage/UsageGate';
+import { UsageBadge } from '@/components/usage/UsageBadge';
 import { promptService } from '@/services/promptService';
 import { videoService } from '@/services/videoService';
-import { cn, generateId } from '@/utils';
+import { cn } from '@/utils';
 import type { PromptTemplate, VideoSettings } from '@/types';
 
 const defaultSettings: VideoSettings = {
@@ -18,6 +21,7 @@ const defaultSettings: VideoSettings = {
 export function Generate() {
   const navigate = useNavigate();
   const { state, dispatch } = useAppStore();
+  const { recordUsage } = useUsage();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('professional');
   const [copySuccess, setCopySuccess] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -35,20 +39,21 @@ export function Generate() {
     try {
       await navigator.clipboard.writeText(state.generatedPrompt);
       setCopySuccess(true);
+      await recordUsage('prompt_gen');
       setTimeout(() => setCopySuccess(false), 2000);
     } catch {
       // Fallback: select text for manual copy
     }
   };
 
-  const handleGenerateVideo = () => {
+  const handleGenerateVideo = async () => {
     if (!state.generatedPrompt) return;
 
     setGenerating(true);
     const video = videoService.generate(state.generatedPrompt, defaultSettings);
     dispatch({ type: 'ADD_VIDEO', payload: video });
+    await recordUsage('video_gen');
 
-    // Simulate async
     setTimeout(() => {
       setGenerating(false);
       navigate('/video');
@@ -158,22 +163,27 @@ export function Generate() {
               </div>
 
               {/* Generate Button */}
-              <button
-                onClick={handleGenerateVideo}
-                disabled={generating || !state.generatedPrompt}
-                className="w-full py-4 rounded-xl text-white font-semibold text-lg neon-btn-purple flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {generating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    生成视频 <ChevronRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
+              <UsageGate feature="video_gen">
+                <button
+                  onClick={handleGenerateVideo}
+                  disabled={generating || !state.generatedPrompt}
+                  className="w-full py-4 rounded-xl text-white font-semibold text-lg neon-btn-purple flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {generating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      生成视频 <ChevronRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+                <div className="mt-2 text-center">
+                  <UsageBadge feature="video_gen" />
+                </div>
+              </UsageGate>
             </div>
           </div>
         </div>

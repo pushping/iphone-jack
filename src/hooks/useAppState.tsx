@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useState, type ReactNode } from 'react';
-import type { Image, PromptTemplate, Video, AppState } from '@/types';
+import type { Image, PromptTemplate, Video, AppState, UserProfile, UsageLimits } from '@/types';
 import { saveState, loadState, saveImageBlob, removeImageBlob, clearImageBlobs } from '@/services/persistence';
+import { api } from '@/lib/api';
 
 /* ---------- Action Types ---------- */
 type Action =
@@ -15,6 +16,9 @@ type Action =
   | { type: 'UPDATE_VIDEO'; payload: { id: string; updates: Partial<Video> } }
   | { type: 'REMOVE_VIDEO'; payload: string }
   | { type: 'SET_CURRENT_VIDEO'; payload: Video | null }
+  | { type: 'SET_USER'; payload: UserProfile | null }
+  | { type: 'SET_USAGE_LIMITS'; payload: UsageLimits | null }
+  | { type: 'INCREMENT_USAGE'; payload: 'promptGen' | 'imageAnalysis' | 'videoGen' }
   | { type: 'HYDRATE'; payload: Partial<AppState> };
 
 /* ---------- Initial State ---------- */
@@ -26,6 +30,8 @@ const initialState: AppState = {
   generatedPrompt: '',
   videos: [],
   currentVideo: null,
+  user: null,
+  usageLimits: null,
 };
 
 /* ---------- Reducer ---------- */
@@ -82,6 +88,21 @@ function appReducer(state: AppState, action: Action): AppState {
       };
     case 'SET_CURRENT_VIDEO':
       return { ...state, currentVideo: action.payload };
+    case 'SET_USER':
+      return { ...state, user: action.payload };
+    case 'SET_USAGE_LIMITS':
+      return { ...state, usageLimits: action.payload };
+    case 'INCREMENT_USAGE': {
+      if (!state.usageLimits) return state;
+      const key = action.payload;
+      return {
+        ...state,
+        usageLimits: {
+          ...state.usageLimits,
+          [key]: { ...state.usageLimits[key], used: state.usageLimits[key].used + 1 },
+        },
+      };
+    }
     default:
       return state;
   }
@@ -100,15 +121,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from persistence on mount
+  // Hydrate from persistence + restore auth session on mount
   useEffect(() => {
     let cancelled = false;
-    loadState().then((saved) => {
+
+    async function init() {
+      // Load persisted app state
+      const saved = await loadState();
       if (!cancelled && Object.keys(saved).length > 0) {
         dispatch({ type: 'HYDRATE', payload: saved });
       }
-      setHydrated(true);
-    });
+
+      // Restore auth session from JWT token
+      const token = localStorage.getItem('ij_token');
+      if (token) {
+        const { data, error } = await api.get<{
+          id: string;
+          email: string;
+          displayName: string | null;
+          role: 'user' | 'admin';
+          subscriptionTier: 'free' | 'paid';
+          createdAt: string;
+        }>('/profile');
+
+        if (!cancelled && data && !error) {
+          dispatch({
+            type: 'SET_USER',
+            payload: {
+              id: data.id,
+              email: data.email,
+              displayName: data.displayName,
+              role: data.role,
+              subscriptionTier: data.subscriptionTier,
+              createdAt: new Date(data.createdAt),
+            },
+          });
+        } else if (error) {
+          // Token expired or invalid, clear it
+          localStorage.removeItem('ij_token');
+        }
+      }
+
+      if (!cancelled) {
+        setHydrated(true);
+      }
+    }
+
+    init();
     return () => { cancelled = true; };
   }, []);
 
@@ -117,14 +176,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return;
     saveState(state);
   }, [state, hydrated]);
-
-  // Side-effect: sync image blobs to IndexedDB
-  useEffect(() => {
-    if (!hydrated) return;
-
-    // When images are removed or cleared, clean up IndexedDB
-    // New images are saved in the Upload page on-drop handler (see useImageUpload)
-  }, [state.uploadedImages, hydrated]);
 
   return (
     <AppContext.Provider value={{ state, dispatch, hydrated }}>

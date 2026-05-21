@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play, Pause, Download, Trash2, Clock, AlertCircle, CheckCircle, RefreshCw, Film, RotateCw, Crop, Sun, SlidersHorizontal, Undo2 } from 'lucide-react';
+import { Play, Pause, Download, Trash2, Clock, AlertCircle, CheckCircle, RefreshCw, Film, RotateCw, Sun, SlidersHorizontal, Undo2 } from 'lucide-react';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { useAppStore } from '@/hooks/useAppState';
 import { videoService } from '@/services/videoService';

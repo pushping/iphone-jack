@@ -36,6 +36,7 @@ export function ParticleBackground() {
   const particlesRef = useRef<Particle[]>([]);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const rafRef = useRef<number>(0);
+  const lastTimeRef = useRef<number>(0);
 
   const initParticles = useCallback((w: number, h: number) => {
     const bgCount = Math.floor((w * h) / 18000);
@@ -63,7 +64,11 @@ export function ParticleBackground() {
       initParticles(canvas.width, canvas.height);
     };
 
+    let mouseThrottle = 0;
     const handleMouse = (e: MouseEvent) => {
+      const now = Date.now();
+      if (now - mouseThrottle < 50) return;
+      mouseThrottle = now;
       mouseRef.current = { x: e.clientX, y: e.clientY };
     };
 
@@ -71,12 +76,24 @@ export function ParticleBackground() {
     window.addEventListener('resize', resize);
     window.addEventListener('mousemove', handleMouse);
 
-    const draw = () => {
+    const draw = (timestamp: number) => {
+      // Frame rate cap at ~60fps
+      if (timestamp - lastTimeRef.current < 16) {
+        rafRef.current = requestAnimationFrame(draw);
+        return;
+      }
+      lastTimeRef.current = timestamp;
+
+      // Pause when tab hidden
+      if (document.hidden) {
+        rafRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const { x: mx, y: my } = mouseRef.current;
 
       for (const p of particlesRef.current) {
-        // Mouse repulsion
         const dx = p.x - mx;
         const dy = p.y - my;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -88,21 +105,16 @@ export function ParticleBackground() {
           p.vy += (dy / dist) * force * 0.5;
         }
 
-        // Damping
         p.vx *= 0.98;
         p.vy *= 0.98;
-
-        // Move
         p.x += p.vx;
         p.y += p.vy;
 
-        // Boundaries
         if (p.x < 0) p.x = canvas.width;
         if (p.x > canvas.width) p.x = 0;
         if (p.y < 0) p.y = canvas.height;
         if (p.y > canvas.height) p.y = 0;
 
-        // Draw
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
@@ -110,11 +122,13 @@ export function ParticleBackground() {
         ctx.fill();
       }
 
-      // Draw connections between close foreground particles
+      // Draw connections (limit to 200 pairs max for performance)
       ctx.globalAlpha = 1;
       const fgParticles = particlesRef.current.filter((p) => p.layer !== 'bg');
-      for (let i = 0; i < fgParticles.length; i++) {
-        for (let j = i + 1; j < fgParticles.length; j++) {
+      let pairCount = 0;
+      const maxPairs = 200;
+      for (let i = 0; i < fgParticles.length && pairCount < maxPairs; i++) {
+        for (let j = i + 1; j < fgParticles.length && pairCount < maxPairs; j++) {
           const a = fgParticles[i];
           const b = fgParticles[j];
           const d = Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -125,6 +139,7 @@ export function ParticleBackground() {
             ctx.strokeStyle = `rgba(34,211,238,${0.1 * (1 - d / 150)})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
+            pairCount++;
           }
         }
       }

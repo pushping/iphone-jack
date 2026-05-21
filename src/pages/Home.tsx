@@ -1,147 +1,83 @@
 import { lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Film, Zap } from 'lucide-react';
+import { HeroSection } from '@/components/home/HeroSection';
+import { FeatureSection } from '@/components/home/FeatureSection';
 import { PageTransition } from '@/components/layout/PageTransition';
-import { useAppStore } from '@/hooks/useAppState';
 
-// 懒加载重组件 — Three.js + Canvas 粒子单独拆包
-const ParticleBackground = lazy(() =>
-  import('@/components/particle-bg/ParticleBackground').then((m) => ({
-    default: m.ParticleBackground,
-  })),
-);
-const Phone3D = lazy(() =>
-  import('@/components/3d-showcase/Phone3D').then((m) => ({
-    default: m.Phone3D,
-  })),
-);
+const PromptDemo = lazy(() => import('@/components/home/PromptDemo').then((m) => ({ default: m.PromptDemo })));
+const AnalysisDemo = lazy(() => import('@/components/home/AnalysisDemo').then((m) => ({ default: m.AnalysisDemo })));
+const VideoDemo = lazy(() => import('@/components/home/VideoDemo').then((m) => ({ default: m.VideoDemo })));
+const PricingSection = lazy(() => import('@/components/home/PricingSection').then((m) => ({ default: m.PricingSection })));
 
-const features = [
-  {
-    icon: Sparkles,
-    title: '智能提示词生成',
-    desc: '基于 AI 模板自动生成专业营销文案',
-    color: 'text-neon-cyan',
-    border: 'neon-border-cyan',
-  },
-  {
-    icon: Film,
-    title: '短视频自动生成',
-    desc: '一键生成专业营销短视频',
-    color: 'text-neon-purple',
-    border: 'neon-border-purple',
-  },
-  {
-    icon: Zap,
-    title: '3D 沉浸式体验',
-    desc: '科技感视觉设计与粒子动画效果',
-    color: 'text-neon-blue',
-    border: 'neon-border-blue',
-  },
-];
+const DemoFallback = () => (
+  <div className="glass rounded-2xl p-6 h-64 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-cyan" />
+  </div>
+);
 
 export function Home() {
-  const navigate = useNavigate();
-  const { state } = useAppStore();
-  const hasImages = state.uploadedImages.length > 0;
-
   return (
     <PageTransition>
-      <div className="min-h-screen relative overflow-hidden">
-        <Suspense fallback={null}>
-          <ParticleBackground />
+      <div className="min-h-screen relative">
+        <HeroSection />
+
+        <Suspense fallback={<DemoFallback />}>
+          <FeatureSection
+            id="feature-prompt"
+            title="智能提示词生成"
+            subtitle="一句话，生成全平台优化提示词"
+            description="选择目标 AI 平台（Midjourney、Sora、DALL-E、Kling 等），系统自动生成针对该平台优化的专业提示词，直接复制使用。"
+            features={[
+              '支持 6+ 主流 AI 平台',
+              '自动优化关键词和参数',
+              '可编辑自定义后再复制',
+              '免费用户可使用 5 次',
+            ]}
+            ctaText="立即体验"
+            ctaLink="/generate"
+            badge="功能一"
+            accentColor="cyan"
+            demo={<PromptDemo />}
+          />
+
+          <FeatureSection
+            id="feature-analysis"
+            title="图片智能分析"
+            subtitle="上传图片，AI 自动识别产品特征"
+            description="上传一张产品图片，AI 视觉模型自动分析颜色、材质、设计风格等特征，生成结构化的营销描述和视频提示词。"
+            features={[
+              'AI 视觉识别产品细节',
+              '自动生成营销文案',
+              '一键转化为视频提示词',
+              '免费用户可使用 5 次',
+            ]}
+            ctaText="开始分析"
+            ctaLink="/upload"
+            badge="功能二"
+            accentColor="purple"
+            reverse
+            demo={<AnalysisDemo />}
+          />
+
+          <FeatureSection
+            id="feature-video"
+            title="视频一键生成"
+            subtitle="从提示词到成品视频，一步到位"
+            description="输入提示词或基于图片分析结果，AI 直接生成产品营销短视频。支持多种分辨率和风格选择。"
+            features={[
+              '720p / 1080p 多分辨率',
+              '15s / 30s 时长选择',
+              '电影 / 极简 / 活力风格',
+              '免费用户可生成 1 个视频',
+            ]}
+            ctaText="开始生成"
+            ctaLink="/video"
+            badge="功能三"
+            accentColor="blue"
+            demo={<VideoDemo />}
+          />
+
+          <PricingSection />
         </Suspense>
-
-        {/* Hero */}
-        <section className="relative z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 md:pt-24">
-            <div className="grid md:grid-cols-2 gap-12 items-center min-h-[calc(100vh-12rem)]">
-              {/* Left - Text */}
-              <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
-                  <Sparkles className="w-4 h-4 text-neon-cyan" />
-                  <span className="text-sm text-gray-300">智能短视频生成平台</span>
-                </div>
-
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight mb-6">
-                  <span className="text-gradient-cyan-purple">iPhone Jack</span>
-                  <br />
-                  <span className="text-white/90">让产品脱颖而出</span>
-                </h1>
-
-                <p className="text-lg text-gray-400 mb-10 max-w-lg leading-relaxed">
-                  上传 iPhone 手机壳图片，一键生成专业营销短视频。
-                  AI 驱动的提示词生成 + 3D 沉浸式展示体验。
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {hasImages ? (
-                    <button
-                      onClick={() => navigate('/generate')}
-                      className="neon-btn-purple px-8 py-4 rounded-xl text-white font-semibold text-lg flex items-center justify-center gap-2"
-                    >
-                      开始生成 <ArrowRight className="w-5 h-5" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => navigate('/upload')}
-                      className="neon-btn-cyan px-8 py-4 rounded-xl text-white font-semibold text-lg flex items-center justify-center gap-2"
-                    >
-                      上传图片 <ArrowRight className="w-5 h-5" />
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => navigate('/video')}
-                    className="px-8 py-4 rounded-xl text-gray-300 font-medium text-lg border border-white/10 hover:border-white/30 hover:text-white transition-all flex items-center justify-center gap-2"
-                  >
-                    <Film className="w-5 h-5" /> 查看视频
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* Right - 3D Phone */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-              >
-                <Suspense fallback={<div className="w-full h-[500px] md:h-[600px] flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-neon-cyan" /></div>}>
-                  <Phone3D />
-                </Suspense>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* Features */}
-        <section className="relative z-10 pb-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-3 gap-6">
-              {features.map((feature, i) => {
-                const Icon = feature.icon;
-                return (
-                  <motion.div
-                    key={feature.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3 + i * 0.15 }}
-                    className={`glass rounded-2xl p-8 ${feature.border} hover:scale-[1.02] transition-transform`}
-                  >
-                    <Icon className={`w-10 h-10 ${feature.color} mb-4`} />
-                    <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">{feature.desc}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
       </div>
     </PageTransition>
   );

@@ -3,13 +3,20 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider, useAppStore } from '@/hooks/useAppState';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AdminRoute } from '@/components/auth/AdminRoute';
 
 // 懒加载页面 — 按路由拆分，首屏只加载当前页面
 const Home = lazy(() => import('@/pages/Home').then((m) => ({ default: m.Home })));
+const Login = lazy(() => import('@/pages/Login').then((m) => ({ default: m.Login })));
+const Register = lazy(() => import('@/pages/Register').then((m) => ({ default: m.Register })));
 const Upload = lazy(() => import('@/pages/Upload').then((m) => ({ default: m.Upload })));
 const Generate = lazy(() => import('@/pages/Generate').then((m) => ({ default: m.Generate })));
 const VideoPage = lazy(() => import('@/pages/Video').then((m) => ({ default: m.VideoPage })));
 const NotFound = lazy(() => import('@/pages/NotFound').then((m) => ({ default: m.NotFound })));
+const AdminLogin = lazy(() => import('@/pages/admin/AdminLogin').then((m) => ({ default: m.AdminLogin })));
+const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
+const UserManagement = lazy(() => import('@/pages/admin/UserManagement').then((m) => ({ default: m.UserManagement })));
 
 function PageLoader() {
   return (
@@ -36,10 +43,26 @@ function AppContent() {
       <main className="pt-20">
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Home />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/generate" element={<Generate />} />
-            <Route path="/video" element={<VideoPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+
+            {/* Protected user routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/upload" element={<Upload />} />
+              <Route path="/generate" element={<Generate />} />
+              <Route path="/video" element={<VideoPage />} />
+            </Route>
+
+            {/* Protected admin routes */}
+            <Route path="/admin" element={<AdminRoute />}>
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="users" element={<UserManagement />} />
+            </Route>
+
+            {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

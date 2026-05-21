@@ -1,16 +1,27 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload as UploadIcon, X, CheckCircle, ImagePlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { useAppStore, saveImageBlob, removeImageBlob, clearImageBlobs } from '@/hooks/useAppState';
+import { useUsage } from '@/hooks/useUsage';
+import { UsageGate } from '@/components/usage/UsageGate';
+import { UsageBadge } from '@/components/usage/UsageBadge';
 import { cn, generateId } from '@/utils';
 import type { Image } from '@/types';
 
 export function Upload() {
   const navigate = useNavigate();
   const { state, dispatch } = useAppStore();
+  const { recordUsage } = useUsage();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, []);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -30,8 +41,8 @@ export function Upload() {
       };
 
       dispatch({ type: 'ADD_IMAGE', payload: newImage });
-      // Persist blob to IndexedDB (fire-and-forget)
       saveImageBlob(id, file).catch(() => {});
+      recordUsage('image_analysis');
     },
     [dispatch],
   );
@@ -71,49 +82,54 @@ export function Upload() {
 
           {/* Dropzone */}
           <div className="max-w-2xl mx-auto mb-12">
-            <div
-              {...getRootProps()}
-              className={cn(
-                'border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all',
-                isDragActive && !isDragReject && 'border-neon-cyan bg-neon-cyan/5',
-                isDragReject && 'border-red-500 bg-red-500/5',
-                !isDragActive && !isDragReject && 'border-gray-600 hover:border-neon-cyan/60',
-              )}
-            >
-              <input {...getInputProps()} />
+            <UsageGate feature="image_analysis">
+              <div
+                {...getRootProps()}
+                className={cn(
+                  'border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all',
+                  isDragActive && !isDragReject && 'border-neon-cyan bg-neon-cyan/5',
+                  isDragReject && 'border-red-500 bg-red-500/5',
+                  !isDragActive && !isDragReject && 'border-gray-600 hover:border-neon-cyan/60',
+                )}
+              >
+                <input {...getInputProps()} />
 
-              {previewUrl ? (
-                <div className="relative inline-block">
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="max-h-80 rounded-lg shadow-neon-cyan"
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPreviewUrl(null);
-                    }}
-                    className="absolute top-2 right-2 p-1.5 bg-red-500/80 rounded-full hover:bg-red-500 transition-colors"
-                  >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-              ) : (
-                <div className="py-8">
-                  <UploadIcon className="w-14 h-14 text-neon-cyan mx-auto mb-4 opacity-70" />
-                  <p className="text-lg text-gray-300 mb-2">
-                    {isDragActive ? '释放以上传' : '拖拽图片到这里'}
-                  </p>
-                  <p className="text-gray-500 text-sm mb-6">
-                    支持 PNG, JPG, GIF, WebP，最大 10MB
-                  </p>
-                  <span className="inline-block px-6 py-2.5 rounded-lg neon-btn-cyan text-sm text-white font-medium">
-                    选择文件
-                  </span>
-                </div>
-              )}
-            </div>
+                {previewUrl ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      className="max-h-80 rounded-lg shadow-neon-cyan"
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewUrl(null);
+                      }}
+                      className="absolute top-2 right-2 p-1.5 bg-red-500/80 rounded-full hover:bg-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="py-8">
+                    <UploadIcon className="w-14 h-14 text-neon-cyan mx-auto mb-4 opacity-70" />
+                    <p className="text-lg text-gray-300 mb-2">
+                      {isDragActive ? '释放以上传' : '拖拽图片到这里'}
+                    </p>
+                    <p className="text-gray-500 text-sm mb-6">
+                      支持 PNG, JPG, GIF, WebP，最大 10MB
+                    </p>
+                    <span className="inline-block px-6 py-2.5 rounded-lg neon-btn-cyan text-sm text-white font-medium">
+                      选择文件
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 text-center">
+                <UsageBadge feature="image_analysis" />
+              </div>
+            </UsageGate>
           </div>
 
           {/* Image Gallery */}
